@@ -1,6 +1,9 @@
 ActiveRecord::LogSubscriber
 module ActiveRecord
   class LogSubscriber
+    # Support Rails 3.2
+    IGNORE_PAYLOAD_NAMES=['SCHEMA', 'EXPLAIN'] unless defined?(IGNORE_PAYLOAD_NAMES)
+    
     def sql(event)
       self.class.runtime += event.duration
 
@@ -23,10 +26,18 @@ module ActiveRecord
             attr_name, value = render_bind(attr)
             binds[attr_name] = value
           end
-        else
+        elseif Rails.version.to_i >= 4
           payload[:binds].each do |col, v|
             attr_name, value = render_bind(col, v)
             binds[attr_name] = value
+          end
+        else # Rails 3
+          payload[:binds].each do |col,v|
+            if col
+              binds[col.name] = v
+            else
+              binds[nil] = v
+            end
           end
         end
       end
